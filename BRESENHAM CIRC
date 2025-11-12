@@ -1,0 +1,160 @@
+/*
+ * GLUT Shapes Demo
+ *
+ * Written by Nigel Stewart November 2003
+ *
+ * This program is test harness for the sphere, cone
+ * and torus shapes in GLUT.
+ *
+ * Spinning wireframe and smooth shaded shapes are
+ * displayed until the ESC or q key is pressed.  The
+ * number of geometry stacks and slices can be adjusted
+ * using the + and - keys.
+ */
+
+#ifdef _APPLE_
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+#include<bits/stdc++.h>
+
+#include <stdlib.h>
+using namespace std;
+
+int h=500,w=500;
+
+/* GLUT callback Handlers */
+vector<int>vx,vy;
+bool draw=false;
+
+
+void drawTriangle(){
+    glColor3i(0,0,0);
+    glBegin(GL_LINE_LOOP);
+    for(int i=0;i<3;i++){
+        glVertex2i(vx[i],vy[i]);
+    }
+    glEnd();
+    glFlush();
+}
+
+void display()
+{
+    glClearColor(1,1,1,1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    if(draw)drawTriangle();
+
+}
+
+void mouse(int b,int s,int x,int y){
+    if(b==GLUT_LEFT_BUTTON && s==GLUT_DOWN && !draw){
+        vx.push_back(x);
+        vy.push_back(h-y);
+        if(vx.size()==3){
+            draw=true;
+        }
+        glutPostRedisplay();
+    }
+
+}
+
+void FloodFillUntil(int x,int y,float oldC[],float newC[]){
+    float c[3];
+    glReadPixels(x,y,1,1,GL_RGB,GL_FLOAT,c);
+    if(c[0]==oldC[0] && c[1]==oldC[1] && c[2]==oldC[2]){
+        glColor3fv(newC);
+        glBegin(GL_POINTS);
+        glVertex2i(x,y);
+        glEnd();
+        glFlush();
+
+
+        FloodFillUntil(x+1,y,oldC,newC);
+        FloodFillUntil(x-1,y,oldC,newC);
+        FloodFillUntil(x,y+1,oldC,newC);
+        FloodFillUntil(x,y-1,oldC,newC);
+    }
+}
+
+void doFloodFill(){
+    int cx=(vx[0]+vx[1]+vx[2])/3;
+    int cy=(vy[0]+vy[1]+vy[2])/3;
+
+    float oldC[3]={1,1,1};
+    float newC[3]={1,0,0};
+
+    FloodFillUntil(cx,cy,oldC,newC);
+}
+
+void BoundaryFillUntil(int x,int y,float fillC[],float bodC[]){
+    float c[3];
+    glReadPixels(x,y,1,1,GL_RGB,GL_FLOAT,c);
+    bool isBod=(c[0]==bodC[0] && c[1]==bodC[1] && c[2]==bodC[2]);
+    bool isfill=(c[0]==fillC[0] && c[1]==fillC[1] && c[2]==fillC[2]);
+    if(!isBod && !isfill){
+        glColor3fv(fillC);
+        glBegin(GL_POINTS);
+        glVertex2i(x,y);
+        glEnd();
+        glFlush();
+        //cout<<"true"<<endl;
+        BoundaryFillUntil(x+1,y,fillC,bodC);
+        BoundaryFillUntil(x-1,y,fillC,bodC);
+        BoundaryFillUntil(x,y+1,fillC,bodC);
+        BoundaryFillUntil(x,y-1,fillC,bodC);
+    }
+
+
+
+}
+
+void doBoundryFill(){
+    int cx=(vx[0]+vx[1]+vx[2])/3;
+    int cy=(vy[0]+vy[1]+vy[2])/3;
+
+    float fillC[3]={0,0,1};
+    float bodC[3]={0,0,0};
+
+    BoundaryFillUntil(cx,cy,fillC,bodC);
+
+}
+
+void menu(int ch){
+    if(ch==1){
+        doFloodFill();
+    }
+    else if(ch==2){
+        doBoundryFill();
+    }
+}
+
+/* Program entry poi(nt */
+
+int main(int argc, char *argv[])
+{
+    glutInit(&argc, argv);
+    glutInitWindowSize(w,h);
+    glutInitWindowPosition(10,10);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+
+    glutCreateWindow("GLUT Shapes");
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0,w,0,h);
+
+
+    glutDisplayFunc(display);
+    glutMouseFunc(mouse);
+    glutCreateMenu(menu);
+    glutAddMenuEntry("flood fill",1);
+    glutAddMenuEntry("boundry fill",2);
+    glutAttachMenu(GLUT_MIDDLE_BUTTON);
+
+
+
+
+    glutMainLoop();
+
+    return EXIT_SUCCESS;
+}
