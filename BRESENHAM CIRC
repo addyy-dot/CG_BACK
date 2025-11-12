@@ -1,0 +1,119 @@
+/*
+ * GLUT Shapes Demo
+ *
+ * Written by Nigel Stewart November 2003
+ *
+ * This program is test harness for the sphere, cone
+ * and torus shapes in GLUT.
+ *
+ * Spinning wireframe and smooth shaded shapes are
+ * displayed until the ESC or q key is pressed.  The
+ * number of geometry stacks and slices can be adjusted
+ * using the + and - keys.
+ */
+
+#ifdef _APPLE_
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
+#include<bits/stdc++.h>
+
+using namespace std;
+
+int xc,yc;
+int w=700,h=700;
+
+/* GLUT callback Handlers */
+void setpixel(int x,int y){
+    glPointSize(2);
+    glColor3i(0,0,0);
+    glBegin(GL_POINTS);
+    glVertex2i(x,y);
+    glEnd();
+    glFlush();
+}
+
+void display()
+{
+    glClearColor(1,1,1,1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    setpixel(xc,yc);
+
+
+}
+
+void mouse(int b,int s,int x,int y){
+    if(b==GLUT_LEFT_BUTTON && s==GLUT_DOWN){
+        xc=x-350;
+        yc=350-y;
+        cout<<xc<<' ';
+        cout<<yc<<endl;
+        setpixel(xc,yc);
+    }
+}
+
+
+void drawCircle(int xc,int yc,int x,int y){
+    setpixel(xc+x,yc+y);
+    setpixel(xc+x,yc-y);
+    setpixel(xc-x,yc+y);
+    setpixel(xc-x,yc-y);
+
+    setpixel(xc+y,yc+x);
+    setpixel(xc+y,yc-x);
+    setpixel(xc-y,yc+x);
+    setpixel(xc-y,yc-x);
+}
+
+void breshemenCircle(){
+    int r;
+    cout<<"enter radius:"<<endl;
+    cin>>r;
+
+    int x=0,y=r;
+    int p=3-(2*r);
+    drawCircle(xc,yc,x,y);
+    while(y>=x){
+        x++;
+        if(p>0){
+            p=p+4*(x-y)+10;
+            y--;
+        }
+        else{
+            p=p+4*x+6;
+        }
+        drawCircle(xc,yc,x,y);
+    }
+}
+
+void menu(int ch){
+    if(ch==1){
+        breshemenCircle();
+    }
+}
+
+/* Program entry point */
+
+int main(int argc, char *argv[])
+{
+    glutInit(&argc, argv);
+    glutInitWindowSize(w,h);
+    glutInitWindowPosition(10,10);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+
+    glutCreateWindow("circle");
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(-w/2,w/2,-h/2,h/2);
+
+    glutDisplayFunc(display);
+    glutMouseFunc(mouse);
+    glutCreateMenu(menu);
+    glutAddMenuEntry("breshenem",1);
+    glutAttachMenu(GLUT_MIDDLE_BUTTON);
+    glutMainLoop();
+
+    return EXIT_SUCCESS;
+}
