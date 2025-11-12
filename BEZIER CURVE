@@ -1,0 +1,107 @@
+#include <GL/glut.h>
+#include <cmath>
+#include <thread>
+#include <chrono>
+using namespace std;   // requested
+
+// simple point struct
+struct Point {
+    int x, y;
+};
+
+// global storage for up to 4 control points
+static Point pts[4];
+static int countPts = 0;
+
+// initialize GL state
+void init() {
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glPointSize(5.0f);
+    glLineWidth(1.5f);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0.0, 600.0, 0.0, 480.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT);
+    glFlush();
+}
+
+// draw a single point
+void drawPoint(const Point &p) {
+    glBegin(GL_POINTS);
+      glVertex2i(p.x, p.y);
+    glEnd();
+}
+
+// draw a line segment
+void drawLine(const Point &a, const Point &b) {
+    glBegin(GL_LINES);
+      glVertex2i(a.x, a.y);
+      glVertex2i(b.x, b.y);
+    glEnd();
+}
+
+// compute a point on cubic Bezier at parameter t (0..1)
+Point bezierPoint(const Point &a, const Point &b, const Point &c, const Point &d, double t) {
+    double u = 1.0 - t;
+    double u3 = u * u * u;
+    double u2 = u * u;
+    double t2 = t * t;
+    double t3 = t * t * t;
+
+    Point r;
+    r.x = int(u3 * a.x + 3.0 * t * u2 * b.x + 3.0 * t2 * u * c.x + t3 * d.x + 0.5);
+    r.y = int(u3 * a.y + 3.0 * t * u2 * b.y + 3.0 * t2 * u * c.y + t3 * d.y + 0.5);
+    return r;
+}
+
+// simplified mouse callback
+void mouseHandler(int button, int state, int x, int y) {
+    if (button != GLUT_LEFT_BUTTON || state != GLUT_DOWN) return;
+
+    // store clicked point (convert GLUT y to bottom-left origin)
+    pts[countPts] = { x, 480 - y };
+
+    // draw control point (red) and connecting segment (if exists)
+    glColor3f(1.0f, 0.0f, 0.0f);
+    drawPoint(pts[countPts]);
+    if (countPts > 0) drawLine(pts[countPts - 1], pts[countPts]);
+    glFlush();
+
+    // if 4 points collected -> draw the Bezier curve (black) then reset
+    if (countPts == 3) {
+        glColor3f(0.0f, 0.0f, 0.0f);
+        Point prev = pts[0];
+        const double step = 0.02;
+        for (double t = step; t <= 1.0; t += step) {
+            Point cur = bezierPoint(pts[0], pts[1], pts[2], pts[3], t);
+            drawLine(prev, cur);
+            prev = cur;
+            glFlush();
+            this_thread::sleep_for(chrono::milliseconds(25)); // small animation delay
+        }
+        countPts = 0; // ready for next curve
+    } else {
+        ++countPts;
+    }
+}
+
+// empty display so window doesn't clear previously drawn pixels
+void display() { /* nothing - drawing done in mouse handler */ }
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(600, 480);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("Simple Cubic Bezier (click 4 points)");
+
+    init();
+    glutDisplayFunc(display);
+    glutMouseFunc(mouseHandler);
+    glutMainLoop();
+    return 0;
+}
